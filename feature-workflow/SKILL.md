@@ -102,7 +102,7 @@ delegates habitually "improve" the source design (swap roles, add manual
 triggers, extra endpoints) and Jhonny routinely overrides them with the
 the fidelity-to-source answer ("let's make the roles but don't assign any",
 "there's no need for a manual OT", then "B" = faithful to Fractal). Present each
-divergence as a short A/B question with the evidence (fundación/schema),
+divergence as a short A/B question with the evidence (foundation doc/schema),
 implement only what he picks. Fidelity to the source doc is the default;
 the enum `origen='manual'` and "solicitud normal → OT correctiva" were
 already in the reference design — read the source doc before deciding

@@ -5,9 +5,9 @@ description: >-
   legacy codebases (PHP, any language) into structured reference documentation
   (.md). Focus on what's still relevant today, not the code quality.
 trigger: >-
-  extraer, legado, legacy, dominio, negocio, lógica, nous, plumrose,
+  extract, legacy, domain, business, logic, nous, plumrose,
   documentar, referencia, schema, reglas de negocio, reverse engineer,
-  ingeniería inversa, knowledge preservation
+  reverse engineering, knowledge preservation
 ---
 
 # Legacy Domain Extraction
