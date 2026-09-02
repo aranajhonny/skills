@@ -128,8 +128,7 @@ plan into **dependency-ordered sprints** and run one coder per sprint, with a
 
 1. Sprint order by dependency (e.g. security/roles → catalogs → planes → OTs
    → support → frontend → worker last). Each sprint = 1 `delegate_task` (leaf).
-2. Give EVERY coder the SAME context template (see
-   `references/sprint-coder-context.md`): plan file, scope boundaries
+2. Give EVERY coder the SAME context template: plan file, scope boundaries
    ("NO tocar archivos de sprints anteriores"), repo patterns, user
    decisions, files to create, exact verification command. Consistency
    across sprints keeps the module coherent without communication.
@@ -146,7 +145,6 @@ plan into **dependency-ordered sprints** and run one coder per sprint, with a
      `platform_toolsets.cli`), invoke the plugin's handlers via Python:
      `sys.path.insert(0, '~/.hermes/plugins'); from missions import tools;
      tools.mission_new({...})` / `tools.mission_checkpoint({...})`.
-     Full recipe + signatures: `references/missions-plugin-python-invocation.md`
 
 Mission discipline (user-verified 2026-08-07): the user WILL run
 `hermes missions audit <id>` and `hermes missions list` themselves and

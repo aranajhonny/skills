@@ -1,9 +1,5 @@
 # Reviewing External Audit Reports & mysqli Dead-Error Patterns
 
-Session-proven additions to the qualitative review methodology (estacionamiento/ParkingTrack, Aug 2026).
-
-## Reviewing external audit reports
-
 When the user brings a third-party audit/report for opinion (not asking you to audit from scratch), verify before opining:
 
 1. **Verify each finding against the repo FIRST** — read/grep the exact artifacts cited (dump headers, compose files, migration dirs). An audit is worth exactly its facts; agreement without verification is worthless.

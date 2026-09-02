@@ -122,7 +122,7 @@ con permisos reales (no el cliente sin rol — sus 403 son esperados y confunden
 ### 7. Workers: acumulación con sensores — bugs que matan silenciosamente (evaluación 2026-08-12)
 
 Lógica fina en workers de disparadores que pasa tsc y genera OTs incorrectas semanas
-después (detalle: `references/worker-mantenimiento-review.md`):
+después:
 - **Nunca persistir el estado viejo del sensor**: `UPDATE ... ultimo_estado = a.ultimo_estado`
   (el valor que ya tenía) = el estado NUNCA cambia → horas acumuladas con la máquina
   apagada. El worker debe LEER `lecturas_ultima` del `sensor_estado_id` (una query batch
@@ -175,9 +175,3 @@ Cuando no se puede ejecutar contra la BD real (o el dueño la administra):
 - Verificar valores reales de columnas con `SELECT DISTINCT` antes de asumir
   semántica.
 - El dump local (`init-db/*.sql`) sirve para leer el schema real sin tocar la BD.
-
-## References
-
-- `references/worker-mantenimiento-review.md` — checklist específico del worker
-  de planes de mantenimiento de NousTrack (disparadores, histéresis, tolerancia,
-  anti-re-disparo, eventos QR, acumuladores).
