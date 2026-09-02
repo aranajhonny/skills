@@ -25,7 +25,7 @@ Analyze a codebase's quality beyond LOC metrics. Read representative files, asse
 
 ## When to Use
 
-- User asks "analiza este proyecto", "qué tal está el código", "code quality review"
+- User asks "analyze this project", "how's the code", "code quality review"
 - User wants an honest assessment of a legacy system
 - User wants to know what's worth keeping vs rewriting
 - User wants domain concepts extracted from messy implementations
@@ -80,7 +80,7 @@ Always read first:
 
 ### Phase 3: Read Representative Feature Files
 
-Pick 2-3 feature modules and read one CRUD cycle (agregar/crear, listado, ver):
+Pick 2-3 feature modules and read one CRUD cycle (add/create, list, view):
 
 ```php
 // Pattern to recognize: flat script vs layered
@@ -98,7 +98,7 @@ ALWAYS ASK: Is the PHP thin and the DB fat?
   
   Signals:
   - INSERT without business validation → trigger in DB does it
-  - No complex JOINs in PHP → view materializada handles it
+  - No complex JOINs in PHP → a materialized view handles it
   - Magic numbers mapping to nothing visible → they're in DB functions
 ```
 
@@ -157,7 +157,7 @@ Score /10. Code organization, duplication, naming, error handling.
 The domain concepts, schema patterns, or workflows worth keeping/rebuilding.
 
 ## Overall
-Score /10 with honest commentary. "Funciona en producción pero duele mantenerlo" > "Es una basura".
+Score /10 with honest commentary. "Runs in production but hurts to maintain" > "It's garbage".
 ```
 
 ## Pitfalls

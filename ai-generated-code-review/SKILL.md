@@ -1,6 +1,6 @@
 ---
 name: ai-generated-code-review
-description: "Usa al revisar código generado por IA contra el schema real."
+description: "Use when reviewing AI-generated code against the real schema."
 version: 1.0.0
 author: Hermes Agent
 license: MIT
@@ -13,165 +13,171 @@ metadata:
 
 # AI-Generated Code Review
 
-Checklist para auditar código que generó una IA externa (worker, servicio,
-endpoint) ANTES de aceptarlo. El caso que lo originó: dos versiones de un
-worker de planes de mantenimiento — ambas pasaban `tsc --noEmit` y ambas
-tenían bugs graves que solo aparecen verificando contra el schema real y el
-código existente.
+Checklist for auditing code that an external AI generated (worker, service,
+endpoint) BEFORE accepting it. The case that originated it: two versions of a
+maintenance-plan worker — both passed `tsc --noEmit` and both had severe bugs
+that only show up when verified against the real schema and the existing code.
 
-## Regla de oro
+## Golden rule
 
-**tsc compila ≠ funciona.** Los errores más caros del código generado por IA
-no son de tipos — son de contrato con la realidad (nombres de columnas,
-semántica de datos, cableado). Verificar SIEMPRE contra el schema real.
+**tsc compiles ≠ it works.** The most expensive errors in AI-generated code are
+not type errors — they are contract errors with reality (column names, data
+semantics, wiring). ALWAYS verify against the real schema.
 
-## Checklist genérico
+## Generic checklist
 
-### 1. Cableado — el bug más silencioso
+### 1. Wiring — the most silent bug
 
-La IA genera la clase + la función de arranque pero NADIE la llama. Verificar:
+The AI generates the class plus the startup function but NOBODY calls it. Verify:
 ```bash
 grep -rn "startXWorker\|modules/X/worker" backend/src/ --include="*.ts" | grep -v "worker.ts:"
 ```
-Vacío = el código existe pero nunca corre. Un "worker" sin arranque en
-`index.ts` (carga condicional + import dinámico, patrón del proyecto) es
-código muerto.
+Empty = the code exists but never runs. A "worker" without a startup entry in
+`index.ts` (conditional load + dynamic import, the project's pattern) is dead
+code.
 
-**Ojo con DOS gates de env con nombres parecidos** (caso real, go-live
-mantenimiento): `index.ts` arranca el worker solo si
-`MANTENIMIENTO_WORKER_ENABLED === "1"`, pero `docker-compose.prod.yml` definía
-`WORKER_ENABLED` (un worker DISTINTO, el de notificaciones/cola) y no el de
-mantenimiento → el worker de disparadores corría el build local pero estaba
-muerto en prod. Al revisar cableado, grep el nombre EXACTO de la variable que
-chequea `index.ts`/el arranque, y verificar que el compose/`.env` de prod la
-setee — no asumir que "ya hay un WORKER_ENABLED".
+**Watch for TWO env gates with similar names** (real case, maintenance go-live):
+`index.ts` starts the worker only if `MANTENIMIENTO_WORKER_ENABLED === "1"`, but
+`docker-compose.prod.yml` defined `WORKER_ENABLED` (a DIFFERENT worker, the
+notifications/queue one) and not the maintenance one → the trigger worker ran in
+the local build but was dead in prod. When reviewing wiring, grep the EXACT
+variable name that `index.ts`/the startup checks, and verify the prod
+compose/`.env` sets it — don't assume that "there's already a WORKER_ENABLED".
 
-### 2. SQL embebido: tsc NO valida SQL
+### 2. Embedded SQL: tsc does NOT validate SQL
 
-Typos en strings SQL pasan tsc y matan en runtime. Ejemplo real:
-`p.evento_dias_desp after` (columna real `evento_dias_despues`, alias basura)
-→ ERROR 1054 en TODA corrida, 0 resultados, falla silenciosa. Verificar cada
-identificador SQL contra el schema real:
+Typos in SQL strings pass tsc and kill at runtime. Real example:
+`p.evento_dias_desp after` (real column `evento_dias_despues`, garbage alias)
+→ ERROR 1054 on EVERY run, 0 results, silent failure. Verify each SQL
+identifier against the real schema:
 ```bash
 grep -rn "columna_buscada" backend/src/modules/<modulo>/migrations/*.sql
 ```
-Fíjate en: nombres de columnas completos (sin truncar), alias sin palabras
-reservadas, tablas que realmente existen.
+Check: full column names (not truncated), aliases without reserved words,
+tables that really exist.
 
-### 3. Columnas VARCHAR que parecen booleanos
+### 3. VARCHAR columns that look like booleans
 
-Si el schema dice `activo VARCHAR(100)` y el código compara
-`sensor.activo === "baja"` o `=== true`, es código muerto o incorrecto.
-Los valores reales importan: `'en_servicio'`, `'pendiente'`, `'MANTENIMIENTO'`.
-Siempre: `SELECT DISTINCT columna FROM tabla` (o grep del dump) antes de
-asumir la semántica de una columna.
+If the schema says `activo VARCHAR(100)` and the code compares
+`sensor.activo === "baja"` or `=== true`, it's dead or wrong code. Real values
+matter: `'en_servicio'`, `'pendiente'`, `'MANTENIMIENTO'`. Always run
+`SELECT DISTINCT columna FROM tabla` (or grep the dump) before assuming a
+column's semantics.
 
-### 4. INNER JOIN mata filas NULL
+### 4. INNER JOIN kills NULL rows
 
-Cualquier `JOIN` sobre una columna nullable (`activos_id NULL` = plan por
-categoría) elimina filas válidas. Verificar qué filas se pierden con un
-INNER JOIN vs LEFT JOIN: si el diseño permite NULL en esa columna, el JOIN
-debe ser LEFT.
+Any `JOIN` over a nullable column (`activos_id NULL` = plan by category)
+removes valid rows. Check which rows are lost with an INNER JOIN vs LEFT JOIN:
+if the design allows NULL in that column, the JOIN must be LEFT.
 
-### 5. Filtros de vigencia consistentes
+### 5. Consistent validity filters
 
-Cuando un sistema tiene `activo = 1` + `fecha_fin` (vigencia), TODAS las
-queries del mismo dominio deben filtrarlos. Las IAs los ponen en una query
-y los olvidan en la siguiente → el código procesa entidades dadas de baja.
+When a system has `activo = 1` + `fecha_fin` (validity), ALL queries in the same
+domain must filter them. AIs put them in one query and forget them in the next
+→ the code processes entities that were retired.
 
-### 6. Contratos de payload frontend ↔ backend (enums, nombres de campo, valores)
+### 6. Frontend ↔ backend payload contracts (enums, field names, values)
 
-Cuando la IA genera el FRONTEND contra un backend que no escribió, inventa contratos
-que `tsc` no detecta (caso real: 9 bugs en una sesión, todos pasando tsc):
+When the AI generates the FRONTEND against a backend it didn't write, it invents
+contracts that `tsc` doesn't catch (real case: 9 bugs in one session, all
+passing tsc):
 
-- **Estados fantasma**: la UI usa valores que el ENUM real no tiene (`asignada`/
-  `completada` en OT). Síntoma clásico: la OT nunca puede cerrarse porque
-  `en_revision` solo ofrece una transición inexistente → 400. Comparar CADA estado/
-  enum de la UI contra el ENUM de la migración.
-- **Nombres de campo divergentes**: frontend manda `id_temporal`, backend lee
-  `temp_id` → las subtareas fallan siempre con "referencia un padre que no existe".
-  Grep el nombre que LEE el backend (handler), no el que manda el frontend.
-- **Interfaces TS que inventan el schema (la dirección inversa)**: la IA tipa el
-  frontend con columnas que NO existen y renderiza con esos nombres → columna vacía
-  que tsc no detecta. Casos reales en mantenimiento: `OtManoObra.tecnicos_id` (columna
-  real `usuarios_id`), `OtTarea/OtEvento/OtFirma.ordenes_trabajo_id` (real `ot_id`),
-  `ProgramacionMantenimiento.planes_mantenimiento_id` (real `plan_id`); y renders que
-  leen `mo.tecnico_nombre` / `mo.fecha` cuando el backend devuelve `usuario_nombre` /
-  `fecha_registro` → el técnico y la fecha de mano de obra salen siempre "—"/vacío.
-  Verificar CADA campo de la interface contra el `SELECT`/columna real del handler.
-- **Endpoints fantasma en el cliente API**: un método del cliente llama a una ruta que
-  el router no monta (ej. `GET /ots/:id/firmas` cuando solo existe `POST /:id/firmas`;
-  las firmas ya vienen en el detalle) → 404 o código muerto. Cruce cada `api.get/post`
-  del cliente con las rutas reales del `*.routes.ts`.
-- **Valores de enum con locale/ñ**: `anios` (UI) vs `años` (worker) → fallback
-  silencioso a `DAY` → un plan anual se dispara cada día. Verificar los values de
-  los `<option>` contra los keys reales del backend.
-- **Máquina de transiciones duplicada**: la UI espeja la máquina de estados del
-  backend y la IA la inventa distinta. Parsear la del backend y comparar estado
-  por estado (set de `next` iguales).
-- **Helpers TZ mal copiados**: `toLocalIsoString` que devuelve `toISOString()`
-  (resta la zona). Nunca `toISOString()` para enviar datetime-local del repo.
+- **Ghost states**: the UI uses values the real ENUM doesn't have (`asignada`/
+  `completada` in OTs). Classic symptom: the OT can never be closed because
+  `en_revision` only offers a nonexistent transition → 400. Compare EVERY UI
+  state/enum against the migration's ENUM.
+- **Divergent field names**: frontend sends `id_temporal`, backend reads
+  `temp_id` → subtasks always fail with "references a parent that doesn't
+  exist". Grep the name the BACKEND reads (handler), not what the frontend
+  sends.
+- **TS interfaces that invent the schema (the reverse direction)**: the AI types
+  the frontend with columns that DON'T exist and renders with those names →
+  empty column that tsc doesn't detect. Real cases in maintenance:
+  `OtManoObra.tecnicos_id` (real column `usuarios_id`),
+  `OtTarea/OtEvento/OtFirma.ordenes_trabajo_id` (real `ot_id`),
+  `ProgramacionMantenimiento.planes_mantenimiento_id` (real `plan_id`); and
+  renders that read `mo.tecnico_nombre` / `mo.fecha` when the backend returns
+  `usuario_nombre` / `fecha_registro` → the technician and labor date always
+  show "—"/empty. Verify EVERY interface field against the handler's real
+  `SELECT`/column.
+- **Ghost endpoints in the API client**: a client method calls a route the
+  router doesn't mount (e.g. `GET /ots/:id/firmas` when only `POST /:id/firmas`
+  exists; the signatures already come in the detail) → 404 or dead code.
+  Cross-check every `api.get/post` in the client against the real
+  `*.routes.ts`.
+- **Enum values with locale/ñ**: `anios` (UI) vs `años` (worker) → silent
+  fallback to `DAY` → an annual plan fires every day. Verify the `<option>`
+  values against the backend's real keys.
+- **Duplicated transition machine**: the UI mirrors the backend state machine
+  and the AI invents a different one. Parse the backend's and compare state by
+  state (same set of `next`).
+- **TZ helpers mis-copied**: `toLocalIsoString` that returns `toISOString()`
+  (subtracts the zone). Never `toISOString()` for sending datetime-local from
+  the repo.
 
-Verificación automatizada: script ad-hoc en **Python puro** (NO `grep -P`: no existe
-en macOS BSD grep — usar `re`). Checks: ENUMs de migraciones vs tipos TS/UI, máquina
-de transiciones frontend vs backend (parsear arrays multilínea con `\[(.*?)\],` —
-las clases Tailwind `bg-[#0070F2]` cortan un `\]` simple), estados fantasma, campos
-de payload, helpers TZ. Correr + build + revisión visual en runtime con usuario
-con permisos reales (no el cliente sin rol — sus 403 son esperados y confunden).
+Automated verification: ad-hoc script in **pure Python** (NOT `grep -P`: it
+doesn't exist in macOS BSD grep — use `re`). Checks: migration ENUMs vs TS/UI
+types, frontend vs backend transition machine (parse multi-line arrays with
+`\\[(.*?)\\],` — Tailwind classes like `bg-[#0070F2]` break a single `\\]`),
+ghost states, payload fields, TZ helpers. Run + build + visual review at
+runtime with a user that has real permissions (not the role-less client — their
+403s are expected and confusing).
 
-### 7. Workers: acumulación con sensores — bugs que matan silenciosamente (evaluación 2026-08-12)
+### 7. Workers: accumulation with sensors — bugs that kill silently (evaluation 2026-08-12)
 
-Lógica fina en workers de disparadores que pasa tsc y genera OTs incorrectas semanas
-después:
-- **Nunca persistir el estado viejo del sensor**: `UPDATE ... ultimo_estado = a.ultimo_estado`
-  (el valor que ya tenía) = el estado NUNCA cambia → horas acumuladas con la máquina
-  apagada. El worker debe LEER `lecturas_ultima` del `sensor_estado_id` (una query batch
-  `IN (...)`, patrón Q5) y persistir la lectura ACTUAL; sumar el delta solo si el estado
-  PREVIO era operando.
-- **Gate por tipo de acumulador, no por nullabilidad del sensor**: `sensor_estado_id IS
-  NULL` = "horas de calendario" solo aplica a `horas_operacion`. Un acumulador de
-  eventos/ciclos con sensor NULL acumulaba horas de calendario ADEMÁS de su conteo →
-  plan "cada 3 partos" disparaba por tiempo. Branch por `tipo`.
-- **Fechas DATE**: `new Date('YYYY-MM-DD')` es medianoche UTC (20:00 local del día
-  anterior en UTC-4) y `toISOString().slice(0,10)` corre la fecha al día siguiente de
-  20:00-23:59 local. Helper `parseFechaLocal` (componentes locales) para base, comparación
-  e INSERT; vencimientos con `23:59:59.999` local.
-- **Campos muertos en UI**: modal que captura un campo y nunca lo envía (CerrarOTModal
-  capturaba moneda) — eliminar, confunde.
-- **Match enum-vs-varchar que NUNCA coincide (dead code silencioso)**: acumular
-  "eventos"/"ciclos" con `a.tipo === c.tipo_evento` compara el enum del acumulador
-  (`'eventos'`/`'ciclos'`) contra un varchar libre (`'golpe'`/`'parto'`) → nunca matchea,
-  el contador jamás suma y un plan "cada N ciclos" nunca dispara. Sin error, sin log.
-  Cuando una acumulación dependa de un `tipo_evento`/código libre, tiene que haber una
-  columna de mapeo explícita (o filtrar por una dimensión que SÍ comparta ambos lados),
-  no confiar en que los labels coincidan por nombre.
+Fine logic in trigger workers that passes tsc and generates wrong OTs weeks
+later:
+- **Never persist the sensor's old state**: `UPDATE ... ultimo_estado = a.ultimo_estado`
+  (the value it already had) = the state NEVER changes → accumulated hours with
+  the machine off. The worker must READ `lecturas_ultima` from `sensor_estado_id`
+  (a batch `IN (...)` query, pattern Q5) and persist the CURRENT reading; add the
+  delta only if the PREVIOUS state was operating.
+- **Gate by accumulator type, not by sensor nullability**:
+  `sensor_estado_id IS NULL` = "calendar hours" only applies to
+  `horas_operacion`. An event/cycle accumulator with a NULL sensor accumulated
+  calendar hours IN ADDITION to its count → a "every 3 births" plan fired by
+  time. Branch by `tipo`.
+- **DATE fields**: `new Date('YYYY-MM-DD')` is UTC midnight (20:00 local of the
+  previous day in UTC-4) and `toISOString().slice(0,10)` moves the date to the
+  next day from 20:00-23:59 local. Helper `parseFechaLocal` (local components)
+  for base, comparison and INSERT; due dates with `23:59:59.999` local.
+- **Dead UI fields**: modal captures a field and never sends it
+  (CerrarOTModal captured currency) — remove, it confuses.
+- **Enum-vs-varchar match that NEVER matches (silent dead code)**: accumulating
+  "events"/"cycles" with `a.tipo === c.tipo_evento` compares the accumulator
+  enum (`'eventos'`/`'ciclos'`) against a free varchar (`'golpe'`/`'parto'`) →
+  never matches, the counter never adds and a "every N cycles" plan never fires.
+  No error, no log. When an accumulation depends on a `tipo_evento`/free code,
+  there must be an explicit mapping column (or filter on a dimension both sides
+  actually share), don't rely on labels matching by name.
 
-### 8. Test funcional de lógica privada con pool mock (patrón 2026-08-12)
+### 8. Functional test of private logic with a mock pool (pattern 2026-08-12)
 
-Para verificar métodos privados de un worker/servicio SIN tocar BD ni refactorizar:
-instanciar la clase con un `pool` fake (objeto con `query` que inspecciona el SQL y
-devuelve filas según el query) + logger fake, y llamar el método vía `(w as any).metodo(...)`.
-Correr con `npx tsx script.ts` desde el repo backend. Verifica las queries emitidas y los
-valores calculados (ej: sensor ON acumula delta, sensor apagado fija estado 0, eventos no
-suman tiempo, fecha local correcta). Los imports top-level del módulo (pool de
-config/database) son lazy — no conectan si no se ejecutan queries reales.
+To verify a worker/service's private methods WITHOUT touching the DB or
+refactoring: instantiate the class with a fake `pool` (an object whose `query`
+inspects the SQL and returns rows based on the query) + fake logger, and call
+the method via `(w as any).metodo(...)`. Run with `npx tsx script.ts` from the
+backend repo. It verifies the emitted queries and the computed values (e.g.
+sensor ON accumulates delta, sensor off sets state 0, events don't add time,
+correct local date). The module's top-level imports (config/database pool) are
+lazy — they don't connect unless real queries run.
 
-## Verificación sin tocar producción
+## Verification without touching production
 
-Cuando no se puede ejecutar contra la BD real (o el dueño la administra):
+When you can't run against the real DB (or its owner administers it):
 
-1. **Extraer la función real del archivo** con regex y probarla en Node
-   (script ad-hoc): quitar tipos TS, `new Function`, casos de entrada/salida.
-2. **Simular secuencias de datos** sobre las que opera la lógica.
-3. **Greps de invariantes**: anti-patrones del contrato (`Number(x)`, `=== 1`,
-   `as any`, `new Date(id)` — id usado como fecha).
-4. `npx tsc --noEmit` como gate mínimo, nunca como verificación suficiente.
-5. **Nunca afirmar "verificado" sin output de comando real.**
+1. **Extract the real function from the file** with regex and test it in Node
+   (ad-hoc script): strip TS types, `new Function`, input/output cases.
+2. **Simulate the data sequences** the logic operates on.
+3. **Invariant greps**: contract anti-patterns (`Number(x)`, `=== 1`,
+   `as any`, `new Date(id)` — id used as a date).
+4. `npx tsc --noEmit` as a minimum gate, never as sufficient verification.
+5. **Never claim "verified" without real command output.**
 
-## Verificación contra producción
+## Verification against production
 
-- BD prod = SOLO SELECTs, y los corre el dueño del server. Entregar comandos
-  listos, no ejecutarlos.
-- Verificar valores reales de columnas con `SELECT DISTINCT` antes de asumir
-  semántica.
-- El dump local (`init-db/*.sql`) sirve para leer el schema real sin tocar la BD.
+- Prod DB = SELECTs ONLY, and the server owner runs them. Deliver ready
+  commands, don't execute them.
+- Verify real column values with `SELECT DISTINCT` before assuming semantics.
+- The local dump (`init-db/*.sql`) serves to read the real schema without
+  touching the DB.

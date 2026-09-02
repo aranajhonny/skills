@@ -26,13 +26,13 @@ Look for `TEXT`/`VARCHAR(255)` used where `DECIMAL`/`INT`/`NUMERIC` belongs. Sam
 SELECT
   CASE
     WHEN valor IS NULL THEN 'NULL'
-    WHEN valor = '' THEN 'vacio'
-    WHEN valor = '0' THEN 'cero'
-    WHEN valor = '1' THEN 'uno'
-    WHEN valor REGEXP '^-?[0-9]+$' THEN 'entero'
+    WHEN valor = '' THEN 'empty'
+    WHEN valor = '0' THEN 'zero'
+    WHEN valor = '1' THEN 'one'
+    WHEN valor REGEXP '^-?[0-9]+$' THEN 'integer'
     WHEN valor REGEXP '^-?[0-9]+\\\\.[0-9]+$' THEN 'decimal'
     WHEN LEFT(valor, 1) = '{' THEN 'JSON'
-    ELSE CONCAT('otro: ', LEFT(valor, 50))
+    ELSE CONCAT('other: ', LEFT(valor, 50))
   END AS categoria,
   COUNT(*) AS total
 FROM <table>
@@ -114,7 +114,7 @@ When the deliverable is migration files (not yet executed), check for:
 
 1. **Reporting type mismatches without checking the code** — the code may have a deliberate fallback. Always trace the write path before suggesting a type change.
 2. **Assuming TEXT is "flexible"** — TEXT forces off-page storage in InnoDB. 99.9% numeric means DECIMAL is right. Handle the 0.1% edge case with a separate column or NULL.
-3. **Suggesting changes the user didn't ask for** — when user says "no hagas nada solo analiza", respect it literally.
+3. **Suggesting changes the user didn't ask for** — when user says "do nothing, just analyze", respect it literally.
 
 ## Verification Checklist
 
@@ -132,4 +132,4 @@ When the deliverable is migration files (not yet executed), check for:
 ## Support files
 
 - `references/mysql-audit-queries.md` — SQL queries for schema auditing
-- `references/mysql-sqlite-er-diagram.md` — convertir dump MySQL + migraciones a SQLite `.db` para ER Diagram nativo en DBeaver (receta completa con regex de conversión y pitfalls)
+- `references/mysql-sqlite-er-diagram.md` — convert a MySQL dump + migrations to a SQLite `.db` for DBeaver's native ER Diagram (full recipe with conversion regexes and pitfalls)

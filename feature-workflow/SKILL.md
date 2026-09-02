@@ -15,7 +15,7 @@ metadata:
 
 Use this skill when the user describes a new feature or change request — whether it's a ticket, a verbal description, or a screenshot with instructions.
 
-The core problem this solves: **jumping to code before the full requirement is understood** wastes time and frustrates the user ("deshaz todo, no me preguntaste nada").
+The core problem this solves: **jumping to code before the full requirement is understood** wastes time and frustrates the user ("undo everything, you didn't ask me anything").
 
 ## Mandatory flow
 
@@ -33,28 +33,28 @@ The core problem this solves: **jumping to code before the full requirement is u
 Once they're done, summarize what you understood:
 
 ```
-Lo que entiendo:
-1. [punto A]
-2. [punto B]
-3. [punto C]
+What I understood:
+1. [point A]
+2. [point B]
+3. [point C]
 
-¿Voy bien?
+Am I on track?
 ```
 
 Key questions to ask (pick what's relevant):
-- "¿Esto reemplaza algo existente o funciona en paralelo?"
-- "¿Qué partes del sistema actual NO debo tocar?"
-- "¿A qué nivel aplica? (activo individual, tipo de activo, organización, global)"
-- "¿Quién va a ver/usa esto? ¿Hay restricciones de visibilidad?"
+- "Does this replace something existing or run in parallel?"
+- "Which parts of the current system should I NOT touch?"
+- "What level does it apply to? (individual asset, asset type, organization, global)"
+- "Who will see/use this? Are there visibility restrictions?"
 
 **Do NOT ask open-ended "what should I do?"** — propose a direction and ask for confirmation instead.
 
 ### Phase 3: Name things correctly
 
-If the user used specific terms ("tipo de activo", "niveles", "plantillas"), use those exact terms in the UI. If the internal DB/model name differs from the user-facing name, translate in the UI layer, not the other way around.
+If the user used specific terms ("asset type", "levels", "templates"), use those exact terms in the UI. If the internal DB/model name differs from the user-facing name, translate in the UI layer, not the other way around.
 
-**Bad:** Showing "Categoría de Activo" in the UI when the user said "Tipo de Activo"
-**Good:** Keep `categorias_activo` in the code/DB, show "Tipo de Activo" in labels
+**Bad:** Showing "Asset Category" in the UI when the user said "Asset Type"
+**Good:** Keep `categorias_activo` in the code/DB, show "Asset Type" in labels
 
 ### Phase 4: Consider data visibility
 
@@ -67,11 +67,11 @@ Always ask yourself: **what data should this user actually see?**
 
 ### Phase 4.5: Diagnose-before-redesign (when user shows confusion about existing UI)
 
-When the user pastes a screenshot, share of data, or says a page is "sobrecargada" / "no se entiende nada":
+When the user pastes a screenshot, share of data, or says a page is "overloaded" / "nothing makes sense":
 
 1. **Analyze the code first** — don't guess. Read the relevant controller, queries, and component to understand WHY data appears differently or why the page feels overloaded.
-2. **Explain the root cause** — separate the data sources (e.g., "esto son notificaciones_enviadas, esto es alertas, esto es alertas_atendidas — son 3 tablas distintas")
-3. **Let the user refine** — after they understand the landscape, they'll clarify what they actually want (e.g., "el admin debe ver todo + las respuestas WhatsApp")
+2. **Explain the root cause** — separate the data sources (e.g., "these are notificaciones_enviadas, this is alertas, this is alertas_atendidas — 3 different tables")
+3. **Let the user refine** — after they understand the landscape, they'll clarify what they actually want (e.g., "the admin should see everything + the WhatsApp responses")
 4. **Propose a concrete redesign** — offer a simplified structure with fewer tabs/sections. Present options to choose from.
 5. **Wait for confirmation** before coding
 
@@ -93,15 +93,15 @@ Use the `plan` skill to write a concrete markdown plan with:
 
 ### Phase 6: Wait for confirmation
 
-Present the plan and wait for explicit confirmation ("dale", "sí", "OK", "continúa", "hazlo") before implementing.
+Present the plan and wait for explicit confirmation ("go ahead", "yes", "OK", "continue", "do it") before implementing.
 
-If the user says "continúa" or "dale con todo a ese plan", proceed.
+If the user says "continue" or "go ahead with all of that plan", proceed.
 
 **Confirm design divergences as questions, not proposals.** Planners and AI
 delegates habitually "improve" the source design (swap roles, add manual
 triggers, extra endpoints) and Jhonny routinely overrides them with the
-fidelity-to-source answer ("hagamoslos roles pero no asignes ninguno",
-"no hay que tener ot manual", then "B" = fiel a Fractal). Present each
+the fidelity-to-source answer ("let's make the roles but don't assign any",
+"there's no need for a manual OT", then "B" = faithful to Fractal). Present each
 divergence as a short A/B question with the evidence (fundación/schema),
 implement only what he picks. Fidelity to the source doc is the default;
 the enum `origen='manual'` and "solicitud normal → OT correctiva" were
@@ -116,7 +116,7 @@ something is missing.
 
 ### Phase 7.5: Ephemeral features (import / temporary overlay)
 
-When building features that import or overlay data from OTHER parts of the system (sensors from other assets, readings from another org, etc.) and the user explicitly says "no se guarda nada, es temporal":
+When building features that import or overlay data from OTHER parts of the system (sensors from other assets, readings from another org, etc.) and the user explicitly says "nothing is saved, it's temporary":
 
 - **State goes in memory only** — `useState`, `useRef`, no `localStorage`/`sessionStorage`. On page refresh or navigate away, the state resets automatically.
 - **Clear on asset change** — if the feature depends on a `selectedActivoId` (or similar parent entity), clear the imported state in the same `useEffect` that clears other per-asset state (secondary sensors, etc.)
@@ -131,14 +131,14 @@ After the first working version, the user will test the UI and give visual corre
 - **Label format**: user may dislike separator characters (`—`, `-`, `·`) — they prefer `|`.
 - **Placement**: user will reject separate UI sections (badge strips, sidebar widgets) in favor of **inline integrated controls** — auxiliary items should be pills/checkboxes inside existing fieldsets, not standalone blocks.
 - **Compactness**: user wants the densest possible layout that doesn't lose clarity. Avoid padding-heavy modals or sections with lots of whitespace.
-- **Button labels**: user prefers text labels alongside icons (`Importar`, `PNG`) over icon-only buttons. Don't guess — if you're unsure, lean toward explicit text + icon, not icon alone.
+- **Button labels**: user prefers text labels alongside icons (`Import`, `PNG`) over icon-only buttons. Don't guess — if you're unsure, lean toward explicit text + icon, not icon alone.
 - **Chart overlay distinction**: when overlaying multiple datasets on the same chart (imported sensors, compared readings), use TWO visual axes for distinction:
   1. **Separate color palettes** — local/primary data keeps the existing palette, overlaid/imported data gets a distinct palette (cool tones = cyan/blue/indigo/teal vs warm/neutral for locals)
   2. **Dash patterns** (`borderDash` in Chart.js) — locals stay solid, overlaid items cycle through distinct dash patterns: `[6,3]` dash, `[3,3]` dot, `[8,3,2,3]` dash-dot, etc.
   This lets the user tell datasets apart without the legend; the pattern-group (solid vs dashed) instantly separates primary from overlaid data. Thread `borderDash` through your type chain: `AdditionalDataset → DashboardChartDataset → Chart.js dataset config`.
 
 - **Color palette design rules (enterprise/IoT dashboards)**:
-  - **NO childish/flashy colors**: no pink, no neon, no pastel, no bright purple. User will reject these ("parece Disney").
+  - **NO childish/flashy colors**: no pink, no neon, no pastel, no bright purple. User will reject these ("looks like Disney").
   - **Use SAP/enterprise-style colors**: professional blues, teals, greens, muted browns, grays, navy. SAP reference: `#0070F2` blue, `#2B7C6B` teal, `#6BA34A` green, `#1C2D3D` navy, `#6A6D70` gray.
   - **Threshold line colors are FIXED** (critical red `#DC2122`, deficient yellow `#FDB813`). Any sensor/overlay palette MUST have ALL colors with RGB Euclidean distance Δ > 150 from BOTH threshold colors. Check programmatically:
     ```python
@@ -153,17 +153,17 @@ After the first working version, the user will test the UI and give visual corre
 
 **Approach**: each round is a fast edit → commit → present. No need to re-plan the full feature. The user already validated the concept; now it's pixel-pushing.
 
-### Phase 8: Deploy (when user says "comitea pushea y has deploy")
+### Phase 8: Deploy (when user says "commit, push, and deploy")
 
 After implementation and verification:
 
 ```bash
-# Commit y push
+# Commit and push
 git add <files>
-git commit -m "feat(x): descripción concisa"
+git commit -m "feat(x): concise description"
 git push origin main
 
-# Deploy a producción (SSH)
+# Deploy to production (SSH)
 ssh root@167.172.133.220
 cd ~/app && git pull && docker compose -f docker-compose.prod.yml build --no-cache frontend backend && docker compose -f docker-compose.prod.yml up -d frontend backend
 
@@ -204,21 +204,21 @@ The page might be wrong for the requirement. Don't amend a broken design — con
 Scope creep. If the user didn't ask for it, don't add it. Stick to the confirmed plan.
 
 ### Touch nothing unmentioned
-If the user talks about "new plantillas for tipo de activo" and doesn't mention the old "plantillas for activo" system — leave it alone. Don't touch, refactor, or remove it.
+If the user talks about "new templates for asset type" and doesn't mention the old "templates for asset" system — leave it alone. Don't touch, refactor, or remove it.
 
-### "Why didn't you delegate this?" — ADD (2026-08-07): Frontend IO-heavy que falla repetido
+### "Why didn't you delegate this?" — ADD (2026-08-07): IO-heavy frontend that fails repeatedly
 
-El subagente es mas lento que tu ejecucion directa cuando el cuello de botella es IO
-(network timeout, archivos grandes que releer). Senales para hacerlo directo (NO delegar):
+The subagent is slower than your direct execution when the bottleneck is IO
+(network timeout, large files to re-read). Signs to do it directly (DO NOT delegate):
 
-1. Subagente fallo 2-3 veces seguidas con el MISMO patron (ej. Sprint 6 frontend: 3 intents
-   morian por timeout de conexion sin escribir codigo). No re-despaches.
-2. Tarea crea muchos archivos (8+ pages) y el context incluye archivos >300 lineas que el
-   subagente relee estallando su presupuesto. Manten el context estrecho:
-   endpoints exactos + patron de 1 pagina, nunca todo el backend.
+1. The subagent failed 2-3 times in a row with the SAME pattern (e.g. Sprint 6 frontend:
+   3 intents died on connection timeouts without writing code). Don't re-dispatch.
+2. The task creates many files (8+ pages) and the context includes files >300 lines that
+   the subagent re-reads, blowing its budget. Keep the context narrow:
+   exact endpoints + one-page pattern, never the whole backend.
 
-Recovery: write_file directo + script ad-hoc temporal (prefijo hermes-verify-*, en
-tempfile OS, borrado tras correr). Verifica con npx tsx script.ts, no con el CLI.
+Recovery: direct write_file + temporary ad-hoc script (hermes-verify-* prefix, in the
+OS temp dir, deleted after running). Verify with npx tsx script.ts, not with the CLI.
 
 The user may ask why you're working sequentially instead of spawning subagents. Know when NOT to delegate:
 

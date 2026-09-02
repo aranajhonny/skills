@@ -32,9 +32,9 @@ only injected into subagents created with `role='orchestrator'` (see
 never sees it.
 
 Consequences:
-- Pedirle "refactoriza /storybook" → lo hace secuencial, tool por tool
-- No va a proponer "esto es grande, mejor lo parto y delego"
-- No hay planner/worker; todo es el mismo agente lineal
+- Ask it to "refactor /storybook" → it does it sequentially, tool by tool
+- It won't propose "this is big, better split it up and delegate"
+- There is no planner/worker; everything is the same linear agent
 
 ### How to Enable Autonomous Delegation
 
@@ -129,7 +129,7 @@ plan into **dependency-ordered sprints** and run one coder per sprint, with a
 1. Sprint order by dependency (e.g. security/roles → catalogs → planes → OTs
    → support → frontend → worker last). Each sprint = 1 `delegate_task` (leaf).
 2. Give EVERY coder the SAME context template: plan file, scope boundaries
-   ("NO tocar archivos de sprints anteriores"), repo patterns, user
+   ("DO NOT touch files from previous sprints"), repo patterns, user
    decisions, files to create, exact verification command. Consistency
    across sprints keeps the module coherent without communication.
 3. **Gate between sprints (root agent, before dispatching the next):**
@@ -149,8 +149,8 @@ plan into **dependency-ordered sprints** and run one coder per sprint, with a
 Mission discipline (user-verified 2026-08-07): the user WILL run
 `hermes missions audit <id>` and `hermes missions list` themselves and
 expect the mission state to reflect reality (sprints done, next pending).
-They corrected three times: "usa hermes mission", "no uses python xd quiero
-que uses hermes mission para esas cosas". So: (a) checkpoint after EVERY
+They corrected three times: "use hermes mission", "don't use python xd I want
+you to use hermes mission for those things". So: (a) checkpoint after EVERY
 verified sprint, (b) include the full status in `state` (previous sprints +
 current + next), not just the last note, (c) when resuming work, AUDIT the
 mission first (`hermes missions audit <id>`) to reconcile stale state before
@@ -223,7 +223,7 @@ use a single planner subagent. Pattern validated 2026-08 on plataforma-track:
 
 Pitfall: when the user changes scope AFTER plans are written ("no manual OT",
 "seed without assignments", "worker last"), patch ALL affected plan files,
-mark each change with "decisión <user> <fecha>", then `grep` for residual
+mark each change with "decision <user> <date>", then `grep` for residual
 references to the removed feature (endpoints, modals, buttons) so no plan
 contradicts another.
 

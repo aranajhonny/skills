@@ -3,7 +3,7 @@ name: infrastructure-build-analysis
 description: Evaluate build-vs-adopt decisions for custom infrastructure, accounting for AI-augmented development feasibility.
 triggers:
   - "should we build X from scratch"
-  - "qué tan difícil sería hacer un motor custom"
+  - "how hard would it be to build a custom engine"
   - "build vs buy"
   - "replace X with custom Rust implementation"
   - "can AI build this"
